@@ -61,6 +61,36 @@ header p{font-size:.72rem;color:var(--dim);margin-top:2px;}
 .btn-yeni{display:none;width:100%;padding:15px;border:none;background:linear-gradient(135deg,#92400e,#b45309);color:#fff;font-family:'Exo 2',sans-serif;font-weight:900;font-size:1rem;cursor:pointer;letter-spacing:1px;border-radius:14px;margin-top:8px;touch-action:manipulation;}
 .btn-yeni:active{transform:scale(.98);}
 .btn-evaluate.done{background:#1e3a5c;color:var(--dim);pointer-events:none;}
+.result-card{display:none;border-radius:14px;margin-bottom:14px;overflow:hidden;}
+.result-card.visible{display:block;animation:fadeIn .35s ease;}
+.score-header{background:linear-gradient(135deg,#061a10,#0d2e1c);border:2px solid var(--green);border-radius:14px 14px 0 0;padding:22px 16px 18px;text-align:center;}
+.score-number{font-family:'Exo 2',sans-serif;font-size:3.2rem;font-weight:900;line-height:1;color:var(--green);}
+.score-denom{font-size:.78rem;color:var(--dim);letter-spacing:1px;margin-top:3px;}
+.score-emoji{font-size:2rem;margin-top:10px;}
+.score-avg{font-size:.7rem;color:var(--dim);margin-top:6px;}
+.res-fields{display:flex;flex-direction:column;gap:0;}
+.res-field-card{border-left:2px solid;border-right:2px solid;border-bottom:2px solid;overflow:hidden;}
+.res-field-card:last-child{border-radius:0 0 14px 14px;}
+.res-field-card.ok{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.05);}
+.res-field-card.fail{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04);}
+.res-field-header{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);}
+.res-field-card.ok .res-field-header{background:rgba(34,197,94,.08);}
+.res-field-card.fail .res-field-header{background:rgba(239,68,68,.07);}
+.res-field-icon{font-size:.9rem;flex-shrink:0;}
+.res-field-name{flex:1;font-family:'Exo 2',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.8px;}
+.res-field-card.ok .res-field-name{color:var(--green);}
+.res-field-card.fail .res-field-name{color:var(--red);}
+.res-field-pct{font-family:'Exo 2',sans-serif;font-size:.75rem;font-weight:900;padding:2px 9px;border-radius:10px;}
+.res-field-card.ok .res-field-pct{background:rgba(34,197,94,.2);color:var(--green);}
+.res-field-card.fail .res-field-pct{background:rgba(239,68,68,.15);color:var(--red);}
+.res-field-body{padding:9px 12px;display:flex;flex-direction:column;gap:5px;}
+.res-row{display:flex;align-items:flex-start;gap:8px;font-size:.82rem;}
+.res-lbl{font-size:.66rem;font-family:'Exo 2',sans-serif;color:var(--dim);min-width:62px;flex-shrink:0;padding-top:2px;}
+.res-val{flex:1;word-break:break-word;}
+.res-val.yours-ok{color:var(--green);font-weight:700;}
+.res-val.yours-fail{color:var(--red);}
+.res-val.correct-val{color:var(--green);font-weight:700;}
+.res-empty{color:var(--dim);font-style:italic;font-size:.76rem;}
 
 /* ── DEĞERLENDİR PANELİ ── */
 .deger-section{margin-top:18px;}
@@ -131,6 +161,9 @@ header p{font-size:.72rem;color:var(--dim);margin-top:2px;}
     <button class="btn btn-skip" id="btn-skip" onclick="skipQ()">⏭ Atla</button>
     <button class="btn btn-evaluate" id="btn-evaluate" onclick="degerlendir()">✔ Değerlendir</button>
   </div>
+  <div class="result-card" id="result-card">
+    <div class="score-header" id="score-header">
+      <div class="score-number" id="score-number">—</div>
       <div class="score-denom">/ 100 PUAN</div>
       <div class="score-emoji" id="score-emoji"></div>
       <div class="score-avg" id="score-avg"></div>
@@ -497,6 +530,61 @@ function getBilesikTuru(pol){
   return pol==='apolar' ? 'Apolar Kovalent' : 'Polar Kovalent';
 }
 
+function showResult(res, earned){
+  const card = document.getElementById('result-card');
+  card.classList.add('visible');
+
+  let color, emoji, msg;
+  if(earned>=90){color='var(--green)';emoji='🏆';msg='Mükemmel!';}
+  else if(earned>=70){color='var(--yellow)';emoji='✅';msg='İyi!';}
+  else if(earned>=50){color='#ff8c00';emoji='⚠️';msg='Orta Düzey';}
+  else{color='var(--red)';emoji='❌';msg='Tekrar Çalış';}
+
+  document.getElementById('score-number').textContent = earned;
+  document.getElementById('score-number').style.color = color;
+  document.getElementById('score-header').style.borderColor = color;
+  document.getElementById('score-emoji').textContent = emoji + ' ' + msg;
+  document.getElementById('score-emoji').style.color = color;
+  document.getElementById('score-avg').textContent =
+    'Toplam ortalama: ' + Math.round(totalScore/qCount) + '/100 · Soru: ' + qCount;
+
+  const geoLabels = {
+    'linear':'Linear','linear_unshared':'Linear (LP)','bent_109':'Bent 109°','bent_120':'Bent 120°',
+    'octahedral':'Octahedral','square_planar':'Square Planar','square_pyramidal':'Square Pyramidal',
+    'seesaw':'Seesaw','tetrahedral':'Tetrahedral','trigonal_planar':'Trigonal Planar',
+    'trigonal_pyramidal':'Trigonal Pyramidal','trigonal_bipyramidal':'Trigonal Bipyramidal','t_shaped':'T-Shaped'
+  };
+
+  document.getElementById('res-fields').innerHTML = res.map(r => {
+    const yourRaw = r.id==='geo' ? (geoLabels[r.your]||r.your) : r.your;
+    const corRaw  = r.id==='geo' ? (geoLabels[r.cor]||r.cor)  : r.cor;
+    const yourStr = yourRaw || '';
+    const isEmpty = !yourStr.trim();
+
+    const yourHtml = isEmpty
+      ? '<span class="res-empty">boş bırakıldı</span>'
+      : '<span class="res-val ' + (r.ok?'yours-ok':'yours-fail') + '">' + yourStr + '</span>';
+
+    const correctHtml = r.ok
+      ? ''
+      : '<div class="res-row"><span class="res-lbl">DOĞRUSU</span><span class="res-val correct-val">' + corRaw + '</span></div>';
+
+    return '<div class="res-field-card ' + (r.ok?'ok':'fail') + '">' +
+      '<div class="res-field-header">' +
+        '<span class="res-field-icon">' + (r.ok?'☑':'☒') + '</span>' +
+        '<span class="res-field-name">' + r.lbl + ' &nbsp; ' + r.pct + ' PUAN</span>' +
+        '<span class="res-field-pct">' + (r.ok?'+'+r.pct:'0') + ' p</span>' +
+      '</div>' +
+      '<div class="res-field-body">' +
+        '<div class="res-row"><span class="res-lbl">CEVABUN</span>' + yourHtml + '</div>' +
+        correctHtml +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
 function showDeger(earned){
   if(!current)return;
   const mw=calcMW(current.f);
@@ -635,6 +723,7 @@ function degerlendir(){
 
   totalScore+=earned;
   if(earned>=70) corrCount++; else wrongCount++;
+  showResult(res, earned);
   showDeger(earned);
   document.getElementById('btn-yeni').style.display='block';
 }
@@ -667,6 +756,7 @@ function nextQ(){
   btnEval.classList.remove('done');
   document.getElementById('btn-skip').style.display='inline-block';
   document.getElementById('btn-yeni').style.display='none';
+  document.getElementById('result-card').classList.remove('visible');
   document.getElementById('deger-section').style.display='none';
 
   document.getElementById('inp-main').focus();
